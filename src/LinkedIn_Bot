@@ -1,1 +1,358 @@
 
+import sys
+
+from selenium import webdriver
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.common.exceptions import NoSuchElementException
+from bs4 import BeautifulSoup
+import time
+from random import randint
+
+# For Graphics
+####################################################################################################################
+from PyQt5.QtWidgets import QApplication
+from PyQt5.QtWidgets import QLineEdit
+from PyQt5.QtWidgets import QDialog
+from PyQt5.QtWidgets import QLabel
+from PyQt5.QtWidgets import QVBoxLayout
+from PyQt5.QtWidgets import QFormLayout
+from PyQt5.QtWidgets import QPushButton
+from PyQt5.QtWidgets import QMessageBox
+from PyQt5.QtGui import QIcon
+from PyQt5.QtGui import QFont
+from PyQt5.QtCore import Qt
+from functools import partial
+from qtwidgets import PasswordEdit
+####################################################################################################################
+
+
+URL = "https://www.linkedin.com/"  # url of linkedIn website
+REQUEST_LIMIT = 100  # limit of users to send request
+DELAY = 10  # delay for 10 seconds for page reload
+
+# add some attributes
+opt = Options()
+opt.add_argument("--disable-infobars")
+opt.add_argument("start-maximized")
+opt.add_argument("--disable-extensions")
+opt.add_argument("--start-maximized")
+
+# 1 --> enable
+# 2 -->  disable
+opt.add_experimental_option('excludeSwitches', ['enable-logging'])
+opt.add_experimental_option("prefs", { \
+    "profile.default_content_setting_values.media_stream_mic": 1,
+    "profile.default_content_setting_values.media_stream_camera": 1,
+    "profile.default_content_setting_values.geolocation": 1,
+    "profile.default_content_setting_values.notifications": 1
+})
+
+
+class LinkedIn_Bot:
+    def __init__(self):
+        self.bot = webdriver.Chrome(executable_path=r'chromedriver.exe', options=opt, service_log_path='NUL')
+
+    # to login the linkedIn account
+    def login(self, email, password):
+        self.bot = self.bot
+
+        # go to the login page of linkedIn
+        self.bot.get(URL)
+
+        # to add some random delay
+        # time.sleep(randint(5, 20))
+        time.sleep(5)
+
+        # area to input username/email
+        email_field = self.bot.find_element_by_id("session_key")
+        email_field.click()
+        email_field.send_keys(email)
+
+        # area to input password
+        password_field = self.bot.find_element_by_id("session_password")
+        password_field.click()
+        password_field.send_keys(password)
+
+        # to click on submit button
+        self.bot.find_element_by_xpath("/html/body/main/section[1]/div[2]/form/button").click()
+
+        try:
+            # to check either inputs are valid or not
+            self.bot.find_element_by_id("error-for-username")
+            self.bot.find_element_by_id("error-for-password")
+        except NoSuchElementException:
+            time.sleep(5)
+            return True
+
+        self.bot.quit()
+        return False
+
+    # return list of links of profile IDs
+    # visited_profiles_list         -------> Profiles that have been visited already
+    # profiles_queue                -------> Profiles in queue but not visites
+    def getProfilesIDList(self, html, visited_profiles_list, profiles_queue):
+        profile_IDs_list = []
+
+        time.sleep(5)
+
+        try:
+            # to sparse html of profile list section
+            profile_section = html.find('section', {'class': 'pt5'})
+
+            # to get all 'a' tags
+            a_tags_list = profile_section.findAll('a', {'class': 'pv-pymk-section__member'})
+
+            # to get all profiles' links
+            for link in a_tags_list:
+                # to get link of a profile
+                profile_id_link = link.get('href')
+
+                if profile_id_link not in visited_profiles_list and profile_id_link not in profiles_queue:
+                    profile_IDs_list.append(profile_id_link)
+
+        except NoSuchElementException as e:
+            print("Problem: ", e)
+
+        return profile_IDs_list
+
+
+
+    # visit the prfiles
+    def visitProfiles(self):
+        self.bot = self.bot
+
+        # go to my profile
+        self.bot.get(URL + "in/farhana1i/")
+
+        # to add some random delay
+        # time.sleep(randint(5, 20))
+        time.sleep(3)
+
+        # visited_profiles_list         -------> Profiles that have been visited already
+        # profiles_queue                -------> Profiles in queue but not visites
+        visited_profiles_list = []
+        profiles_queue = []
+
+        # load already visited profiles in "visited_profiles_list"
+        visited_profiles_file = open("visitedProfiles.txt", 'r')
+        visited_profiles_list = visited_profiles_file.read().split('\n')
+
+        visited_profiles_file.close()
+
+        # to get html of current page
+        html = BeautifulSoup(self.bot.page_source, features="html.parser")
+
+        # get list of profile ids link
+        profiles_queue = self.getProfilesIDList(html, visited_profiles_list, profiles_queue)
+
+        # send connection request to all profiles
+        self.connectToProfiles(visited_profiles_list, profiles_queue)
+
+
+
+    # send connection requests to the profiles
+    def connectToProfiles(self, visited_profiles_list, profiles_queue):
+        self.bot = self.bot
+
+        while profiles_queue:
+            try:
+                # remove an ID from the queue and add marked it visited by inserting into the visited profiles list
+                profile_id_link = profiles_queue.pop()
+                visited_profiles_list.append(profile_id_link)
+
+                # visits the profile
+                self.bot.get(URL + profile_id_link)
+
+                # wait for page reload
+                WebDriverWait(self.bot, DELAY).until(EC.visibility_of_element_located((By.TAG_NAME, 'body')))
+                time.sleep(5)
+
+                try:
+                    # to click on the 'connect' button
+                    connect_button = self.bot.find_element_by_class_name("pv-s-profile-actions")
+                    button_text = connect_button.find_element_by_tag_name("span").text
+                    if "Connect" == str(button_text).strip():
+                        connect_button.click()
+
+                    # wait for page reload
+                    time.sleep(3)
+
+                    try:
+                        # click on 'send' button
+                        self.bot.find_element_by_class_name("ml1").click()
+                    except:
+                        print("Send Fail")
+
+                except:
+                    print("Connect Fail")
+
+                # to save all visited profiles in a file
+                with open("visitedProfiles.txt", 'a') as visited_profiles_file:
+                    visited_profiles_file.write(str(profile_id_link) + '\n')
+                visited_profiles_file.close()
+
+                try:
+                    # to get html of current page
+                    html = BeautifulSoup(self.bot.page_source, features="html.parser")
+
+                    list_to_append = self.getProfilesIDList(html, visited_profiles_list, profiles_queue)
+
+                    for profile_id in list_to_append:
+                        profiles_queue.append(profile_id)
+
+                except Exception as e:
+                    print("Problem is: ", e)
+
+                # if reaches to record limit, break the loop
+                if len(profiles_queue) >= REQUEST_LIMIT:
+                    print("Target Completed!")
+                    break
+
+            except:
+                print("ERROR")
+
+    # destructor to close driver
+    def __del__(self):
+        self.bot.quit()
+
+
+
+
+class BotWindow(QDialog):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle('LinkedIn Bot')
+        self.setFixedSize(300, 150)
+
+        window_layout = QVBoxLayout()
+        form_layout = QFormLayout()
+
+        self.email_field = self.createLineEdit("Your username/email...")
+        self.password_field = self.createPasswordEdit("Your password...")
+    
+        email, password = readCredentials("credentials.txt")
+        if (email != None and email != ""):
+            self.email_field.setText(email)
+        if (password != None and password != ""):
+            self.password_field.setText(password)
+
+
+        self.email_field.displayText()
+        self.password_field.displayText()
+
+        # inputs from the user
+        form_layout.addRow(self.createLabel('Email:'), self.email_field)
+        form_layout.addRow(self.createLabel('Password:'), self.password_field)
+
+        window_layout.addLayout(form_layout)
+
+        # to add button
+        self.submit = QPushButton()
+        self.submit.setText("Submit")
+        self.submit.setFixedSize(70, 35)
+        self.submit.setDefault(True)
+
+        self.submit.clicked.connect(partial(setCredentials, self))
+
+        window_layout.addWidget(self.submit)
+
+        # set layout
+        self.setLayout(window_layout)
+
+
+    # set attributes of an input field
+    def createLineEdit(self, placeholder):
+        line_edit = QLineEdit()
+        line_edit.setPlaceholderText(placeholder)       # set place holder
+        line_edit.setFocus()
+        line_edit.setFixedHeight(25)
+        return line_edit
+
+    # set attributes of password input field
+    def createPasswordEdit(self, placeholder):
+        pw_edit = PasswordEdit()
+        pw_edit.setPlaceholderText(placeholder)       # set place holder
+        pw_edit.setFocus()
+        pw_edit.setFixedHeight(25)
+        return pw_edit
+
+    # set label and its attributes
+    def createLabel(self, label_text):
+        label = QLabel()
+        label.setText(label_text)
+        label.setFont(QFont("Arial", 10))
+        label.setFixedHeight(25)
+        return label
+
+
+
+
+# to connect events/signals with slots
+def setup():
+    email, password = readCredentials("credentials.txt")
+
+    if (email == None or email == "") or (password == None or password == ""):
+        return
+
+    my_bot = LinkedIn_Bot()
+
+    # login to account
+    if my_bot.login(email, password):
+        # visits and connects to the profiles
+        my_bot.visitProfiles()
+        return
+
+    print("Invalid Email/Username and Password!")
+
+
+
+# to read credentials of user from the file
+def readCredentials(filename):
+    try:
+        openfile = open(filename, 'r')
+        fileData = openfile.read().split('\n')
+
+        email = str(fileData[0].strip())
+        password = str(fileData[1].strip())
+
+        # to close file
+        openfile.close()
+
+        return email, password
+    except:
+        return None, None
+
+
+# set login details
+def setCredentials(window):
+    if window.email_field.text() == None or window.email_field.text() == "" or window.password_field.text() == None or window.password_field.text() == "":
+        QMessageBox.warning("Please Fill The Form.")
+    else:
+        # save credentials in a file
+        with open("credentials.txt", 'w') as cred_file:
+            cred_file.write(str(window.email_field.text()) + '\n' + str(window.password_field.text()))
+        cred_file.close()
+        setup()
+
+
+
+
+
+# driver function
+def main():
+    app = QApplication(sys.argv)
+
+    window = BotWindow()
+    window.setWindowIcon(QIcon("images/linkedin.ico"))      # set icon for window
+    window.show()
+
+    sys.exit(app.exec())
+# ***********************************************************************
+
+
+
+if __name__ == "__main__":
+    main()
