@@ -26,7 +26,7 @@ For automation, I am using the Python Selenium module. GUI is done with the help
     4.  Go to the directory where you've downloaded the folder.
     5.  Type "python LinkedIn-Bot.py"
     6.  Hit Enter.
-    7.  A dialog box appears.
+    7.  A dialog box will appear.
     8.  Enter your LinkedIn credentials (username and password).
     9.  Click on submit button.
     10. Wait and see.
