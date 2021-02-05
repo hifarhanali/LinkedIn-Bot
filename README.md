@@ -1,17 +1,16 @@
-
-#LinkedIn-Bot
+# LinkedIn-Bot
 
 It is hectic to manually send connection requests to a lot of people on LinkedIn. To solve this problem, I have created a LinkedIn bot that can help you grow your LinkedIn profile.
 
 This bot aims to visit all the profiles in your profile's recommendation list and send them a connection request. 
 
-##Resources
+## Resources
 Python, Selenium, PyQt5, chromedriver, BeautifulSoup
 
 For automation, I am using the Python Selenium module. GUI is done with the help of the PyQt5 library. BeautifulSoup is for scraping profile links on the web.
 
 
-##Install
+## Install
 
     * Python 3.5.0 
     * Selenium (Python Module)
@@ -19,7 +18,7 @@ For automation, I am using the Python Selenium module. GUI is done with the help
     * bs4 (Python Module)
     * chromedriver
 
-##How to execute the bot?
+## How to execute the bot?
 
     1.  Download the zip file of the project
     2.  Extract the downloaded folder.
