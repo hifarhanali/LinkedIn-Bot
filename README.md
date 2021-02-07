@@ -9,14 +9,11 @@ Python, Selenium, PyQt5, chromedriver, BeautifulSoup
 
 For automation, I am using the Python Selenium module. GUI is done with the help of the PyQt5 library. BeautifulSoup is for scraping profile links on the web.
 
-
-## Install
-
-    * Python 3.5.0 
-    * Selenium (Python Module)
-    * PyQt5 (Python Module)
-    * bs4 (Python Module)
-    * chromedriver
+## Installation
+   ```
+   pip install -r requirements.txt
+   ```
+   Also, make sure to keep ```chromedriver``` in the same directory as the code.
 
 ## How to execute the bot?
 
